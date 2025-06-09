@@ -1,0 +1,15 @@
+django 
+pillow  
+requests 
+tweepy 
+beautifulsoup4
+numpy 
+pandas 
+matplotlib 
+torch 
+scikit-learn 
+nltk 
+seaborn 
+tqdm 
+transformers
+aiohttp

@@ -1,0 +1,60 @@
+class NewsDataset(torch.utils.data.Dataset):
+    """Dataset class for news data."""
+    
+    # Class-level label mapping for consistency
+    LABEL_MAP = {
+        "TRUE": 0,
+        "MOSTLY-TRUE": 1,
+        "HALF-TRUE": 2,
+        "BARELY-TRUE": 3,
+        "FALSE": 4,
+        "PANTS-FIRE": 5
+    }
+    
+    def __init__(self, texts, labels, tokenizer, max_length):
+        """Initialize dataset with texts and labels."""
+        # Create normalized label map (handles both upper and lower case)
+        self.label_map = {k.upper(): v for k, v in self.LABEL_MAP.items()}
+        self.label_map.update({k.lower(): v for k, v in self.LABEL_MAP.items()})
+        self.label_map.update({k.replace('-', ' '): v for k, v in self.LABEL_MAP.items()})
+        
+        self.encodings = tokenizer(
+            texts,
+            truncation=True,
+            padding=True,
+            max_length=max_length,
+            return_tensors="pt"
+        )
+        
+        # Process labels with proper type conversion
+        processed_labels = []
+        for label in labels:
+            if isinstance(label, str):
+                # Normalize string label
+                normalized_label = label.upper().replace(' ', '-')
+                label_id = self.label_map.get(normalized_label, -1)
+                if label_id == -1:
+                    # Try without normalization
+                    label_id = self.label_map.get(label, -1)
+                processed_labels.append(label_id)
+            else:
+                # Handle numeric labels
+                try:
+                    label_int = int(label)
+                    if 0 <= label_int <= 5:
+                        processed_labels.append(label_int)
+                    else:
+                        processed_labels.append(-1)
+                except (ValueError, TypeError):
+                    processed_labels.append(-1)
+        
+        # Convert to tensor, defaulting invalid labels to 0
+        self.labels = torch.tensor([l if l != -1 else 0 for l in processed_labels], dtype=torch.long)
+        
+    def __getitem__(self, idx):
+        item = {key: val[idx].clone().detach() for key, val in self.encodings.items()}
+        item['labels'] = self.labels[idx].clone().detach()
+        return item
+    
+    def __len__(self):
+        return len(self.labels)
